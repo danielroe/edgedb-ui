@@ -297,6 +297,9 @@ export class AuthAdminState extends Model({
   async refreshConfig() {
     const conn = connCtx.get(this)!;
 
+    const hasWebAuthn =
+      !!this.providersInfo["ext::auth::WebAuthnProviderConfig"];
+
     const {result} = await conn.query(
       `with module ext::auth
       select {
@@ -310,10 +313,17 @@ export class AuthAdminState extends Model({
             [is OAuthProviderConfig].client_id,
             [is OAuthProviderConfig].additional_scope,
             require_verification := (
-              [is EmailPasswordProviderConfig].require_verification ??
-              [is WebAuthnProviderConfig].require_verification
+              [is EmailPasswordProviderConfig].require_verification${
+                hasWebAuthn
+                  ? ` ?? [is WebAuthnProviderConfig].require_verification`
+                  : ""
+              }
             ),
-            [is WebAuthnProviderConfig].relying_party_origin
+            ${
+              hasWebAuthn
+                ? `[is WebAuthnProviderConfig].relying_party_origin`
+                : ""
+            }
           },
           ui: {
             redirect_to,
